@@ -14,22 +14,42 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from './color';
 
 const STORAGE_KEY = '@toDos';
+const LAST_TODO = '@last';
 
 export default function App() {
   const [working, setWorking] = useState(true);
   const [text, setText] = useState('');
   const [toDos, setToDos] = useState({});
+
+  async function setLastTab() {
+    await AsyncStorage.setItem(LAST_TODO, working ? 'work' : 'travel');
+  }
+
   useEffect(() => {
     loadToDos();
   }, []);
-  const travel = () => setWorking(false);
-  const work = () => setWorking(true);
+
+  useEffect(() => {
+    setLastTab();
+  }, [working]);
+
+  const travel = async () => {
+    setWorking(false);
+  };
+  const work = async () => {
+    setWorking(true);
+  };
+
   const onChangeText = (payload) => setText(payload);
   const saveToDos = async (toSave) => {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   };
+
   const loadToDos = async () => {
+    const tab = await AsyncStorage.getItem(LAST_TODO);
     const s = await AsyncStorage.getItem(STORAGE_KEY);
+
+    setWorking(tab === 'work');
     setToDos(JSON.parse(s));
   };
 
@@ -45,6 +65,7 @@ export default function App() {
     await saveToDos(newTodos);
     setText('');
   };
+
   const deleteToDo = (key) => {
     Alert.alert('Delete To Do?', 'Are you sure?', [
       { text: 'Cancel' },
@@ -60,6 +81,7 @@ export default function App() {
     ]);
     return;
   };
+
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
