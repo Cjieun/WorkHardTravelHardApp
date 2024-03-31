@@ -1,5 +1,5 @@
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,21 +8,23 @@ import {
   TextInput,
   ScrollView,
   Alert,
-} from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { theme } from './color';
+} from "react-native";
+import { FontAwesome } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { theme } from "./color";
 
-const STORAGE_KEY = '@toDos';
-const LAST_TODO = '@last';
+const STORAGE_KEY = "@toDos";
+const LAST_TODO = "@last";
 
 export default function App() {
   const [working, setWorking] = useState(true);
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [toDos, setToDos] = useState({});
+  const [completed, setCompleted] = useState(false);
 
   async function setLastTab() {
-    await AsyncStorage.setItem(LAST_TODO, working ? 'work' : 'travel');
+    await AsyncStorage.setItem(LAST_TODO, working ? "work" : "travel");
   }
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function App() {
   };
 
   const onChangeText = (payload) => setText(payload);
+
   const saveToDos = async (toSave) => {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   };
@@ -49,26 +52,26 @@ export default function App() {
     const tab = await AsyncStorage.getItem(LAST_TODO);
     const s = await AsyncStorage.getItem(STORAGE_KEY);
 
-    setWorking(tab === 'work');
-    setToDos(JSON.parse(s));
+    setWorking(tab === "work");
+    setToDos(s ? JSON.parse(s) : {});
   };
 
   const addToDo = async () => {
-    if (text === '') {
+    if (text === "") {
       return;
     }
     /*const newTodos = Object.assign({}, toDos, {
       [Date.now()]: { text, work: working },
     });*/
-    const newTodos = { ...toDos, [Date.now()]: { text, working } };
+    const newTodos = { ...toDos, [Date.now()]: { text, working, completed } };
     setToDos(newTodos);
     await saveToDos(newTodos);
-    setText('');
+    setText("");
   };
 
   const deleteToDo = (key) => {
-    Alert.alert('Delete To Do?', 'Are you sure?', [
-      { text: 'Cancel' },
+    Alert.alert("Delete To Do?", "Are you sure?", [
+      { text: "Cancel" },
       {
         text: "I'm Sure",
         onPress: async () => {
@@ -82,13 +85,20 @@ export default function App() {
     return;
   };
 
+  const completeTodo = async (key) => {
+    const newToDos = { ...toDos };
+    newToDos[key] = { ...newToDos[key], completed: !newToDos[key].completed };
+    setToDos(newToDos);
+    await saveToDos(newToDos);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
       <View style={styles.header}>
         <TouchableOpacity onPress={work}>
           <Text
-            style={{ ...styles.btnText, color: working ? 'white' : theme.grey }}
+            style={{ ...styles.btnText, color: working ? "white" : theme.grey }}
           >
             Work
           </Text>
@@ -97,7 +107,7 @@ export default function App() {
           <Text
             style={{
               ...styles.btnText,
-              color: !working ? 'white' : theme.grey,
+              color: !working ? "white" : theme.grey,
             }}
           >
             Travel
@@ -110,7 +120,7 @@ export default function App() {
           onChangeText={onChangeText}
           returnKeyType="done"
           value={text}
-          placeholder={working ? 'Add a To Do' : 'Where do you want to go?'}
+          placeholder={working ? "Add a To Do" : "Where do you want to go?"}
           style={styles.input}
         />
       </View>
@@ -118,12 +128,36 @@ export default function App() {
         {Object.keys(toDos).map((key) =>
           toDos[key].working === working ? (
             <View key={key} style={styles.toDo}>
-              <Text style={styles.toDoText}>{toDos[key].text}</Text>
-              <TouchableOpacity onPress={() => deleteToDo(key)}>
-                <Text>
-                  <FontAwesome name="trash" size={18} color={theme.toDoBg} />
-                </Text>
-              </TouchableOpacity>
+              <Text
+                style={{
+                  ...styles.toDoText,
+                  textDecorationLine: toDos[key].completed
+                    ? "line-through"
+                    : "none",
+                }}
+              >
+                {toDos[key].text}
+              </Text>
+              <View style={styles.toDoIcons}>
+                <TouchableOpacity onPress={() => completeTodo(key)}>
+                  <Text>
+                    <MaterialCommunityIcons
+                      name={
+                        toDos[key].completed
+                          ? "checkbox-marked"
+                          : "checkbox-blank-outline"
+                      }
+                      size={24}
+                      color={theme.toDoBg}
+                    />
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => deleteToDo(key)}>
+                  <Text>
+                    <FontAwesome name="trash" size={18} color={theme.toDoBg} />
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : null
         )}
@@ -139,21 +173,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
-    justifyContent: 'space-between',
-    flexDirection: 'row',
+    justifyContent: "space-between",
+    flexDirection: "row",
     marginTop: 100,
   },
   btnText: {
     fontSize: 44,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 30,
     marginVertical: 20,
-
     fontSize: 18,
   },
   toDo: {
@@ -162,13 +195,18 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 20,
     borderRadius: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   toDoText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
+  },
+  toDoIcons: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
   },
 });
